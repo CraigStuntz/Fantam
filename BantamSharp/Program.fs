@@ -43,7 +43,7 @@ let private testData = [
 
 let private test (input, expected) = 
     try 
-      let result = Parser.parse input
+      let result, _ = Parser.parse (Lexer.lex (List.ofSeq input))
       let actual = print result
       match actual = expected with 
       | true -> None
