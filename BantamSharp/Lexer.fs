@@ -13,27 +13,29 @@
     | Name of string
     | Eof
 
-    let rec lex = function 
-        | '(' :: rest -> LeftParen :: lex(rest)
-        | ')' :: rest -> RightParen :: lex(rest)
-        | ',' :: rest -> Comma :: lex(rest)
-        | '=' :: rest -> Assign :: lex(rest)
-        | '+' :: rest -> Plus :: lex(rest)
-        | '-' :: rest -> Minus :: lex(rest)
-        | '*' :: rest -> Asterisk :: lex(rest)
-        | '/' :: rest -> Slash :: lex(rest)
-        | '^' :: rest -> Caret :: lex(rest)
-        | '~' :: rest -> Tilde :: lex(rest)
-        | '!' :: rest -> Bang :: lex(rest)
-        | '?' :: rest -> Question :: lex(rest)
-        | ':' :: rest -> Colon :: lex(rest)
-        | []          -> [ Eof ]
-        | c :: rest when Char.IsLetter(c) -> lexName(rest, [c])
-        | _ :: rest   -> lex(rest) // Ignore anything else
-    and lexName(source: char list, name: char list) = 
-        match source with 
-        | c :: rest when Char.IsLetter(c) -> lexName(rest, name @ [c])
-        | _ -> Name(string(name)) :: lex(source)
+    let lex input = 
+        let rec lexChars = function 
+            | '(' :: rest -> LeftParen  :: lexChars rest
+            | ')' :: rest -> RightParen :: lexChars rest
+            | ',' :: rest -> Comma      :: lexChars rest
+            | '=' :: rest -> Assign     :: lexChars rest
+            | '+' :: rest -> Plus       :: lexChars rest
+            | '-' :: rest -> Minus      :: lexChars rest
+            | '*' :: rest -> Asterisk   :: lexChars rest
+            | '/' :: rest -> Slash      :: lexChars rest
+            | '^' :: rest -> Caret      :: lexChars rest
+            | '~' :: rest -> Tilde      :: lexChars rest
+            | '!' :: rest -> Bang       :: lexChars rest
+            | '?' :: rest -> Question   :: lexChars rest
+            | ':' :: rest -> Colon      :: lexChars rest
+            | []          -> [ Eof ]
+            | c :: rest when Char.IsLetter(c) -> lexName(rest, [c])
+            | _ :: rest   -> lexChars rest // Ignore anything else
+        and lexName(source: char list, name: char list) = 
+            match source with 
+            | c :: rest when Char.IsLetter(c) -> lexName(rest, name @ [c])
+            | _ -> Name(string(name)) :: lexChars(source)
+        lexChars (List.ofSeq input)
 
     let printToken = function
     | LeftParen  -> "("

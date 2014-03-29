@@ -43,17 +43,17 @@ let private testData = [
 
 let private test (input, expected) = 
     try 
-      let result, _ = Parser.parse (Lexer.lex (List.ofSeq input))
+      let result = Parser.parse input
       let actual = print result
       match actual = expected with 
-      | true -> None
+      | true  -> None
       | false -> Some (sprintf "[FAIL] Expected: %s%s         Actual: %s" expected System.Environment.NewLine actual)
     with 
-      | ex -> Some (sprintf "[FAIL] Expected: %s%s          Error: %s" expected System.Environment.NewLine ex.Message)
+      | ex    -> Some (sprintf "[FAIL] Expected: %s%s          Error: %s" expected System.Environment.NewLine ex.Message)
 
 [<EntryPoint>]
 let main argv = 
-    let failed = List.choose test testData
+    let failed    = List.choose test testData
     let failCount = List.length failed
     List.iter (fun (failure: string) -> System.Console.WriteLine(failure)) failed
     printfn "%A tests succeeded. %A failed" (List.length testData - failCount) failCount
