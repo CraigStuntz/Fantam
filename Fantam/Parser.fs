@@ -42,27 +42,27 @@
             match left with 
             | Expression.Name name -> 
                 let right, rest = parseExpression ((infixPrecedence Assign) - 1)  tokens
-                Some(Expression.Assign(name, right), rest)
+                Expression.Assign(name, right), rest
             | _ -> failwith "The left-hand side of an assignment must be a name."
         and parseCall left tokens = 
             let args, rest = parseCallArgs [] tokens
-            Some(Call(left, args), rest)
+            Call(left, args), rest
         and parseConditional left tokens = 
             let thenArm, rest = parseExpression 0 tokens
             match rest with
             | Colon :: rest' ->
                 let elseArm, rest'' = parseExpression ((infixPrecedence Question) - 1) rest'
-                Some(Conditional(left, thenArm, elseArm), rest'')
-            | _               -> failwith "Expected ':'."
+                Conditional(left, thenArm, elseArm), rest''
+            | _              -> failwith "Expected ':'."
         and parseInfixOperator operator left tokens = 
-            let precedence' = 
+            let precedence = 
                 match isRightAssociative operator with
                 | true  -> (infixPrecedence operator) - 1
                 | false -> (infixPrecedence operator) 
-            let right, rest' = parseExpression precedence' tokens
-            Some(Operator(left, operator, right), rest')
+            let right, rest = parseExpression precedence tokens
+            Operator(left, operator, right), rest
         and parsePostfixOperator operator left tokens = 
-            Some(Postfix(left, operator), tokens)
+            Postfix(left, operator), tokens
         and parseInfix precedence left tokens = 
             match tokens with 
             | token :: rest ->
@@ -70,12 +70,12 @@
                 then
                     let parsed =   
                         match token with 
-                        | Assign                           -> parseAssign left rest
-                        | LeftParen                        -> parseCall left rest
-                        | Question                         -> parseConditional left rest
-                        | operator when isInfix operator   -> parseInfixOperator operator left rest
-                        | operator when isPostfix operator -> parsePostfixOperator operator left rest
-                        | _ -> None 
+                        | Assign                           -> Some (parseAssign left rest)
+                        | LeftParen                        -> Some (parseCall left rest)
+                        | Question                         -> Some (parseConditional left rest)
+                        | operator when isInfix operator   -> Some (parseInfixOperator operator left rest)
+                        | operator when isPostfix operator -> Some (parsePostfixOperator operator left rest)
+                        | _                                -> None 
                     match parsed with
                     | Some(left', rest') -> parseInfix precedence left' rest'
                     | None               -> Some(left, rest)
