@@ -63,29 +63,28 @@
             Operator(left, operator, right), rest
         and parsePostfixOperator operator left tokens = 
             Postfix(left, operator), tokens
+        and infixParserForToken = function 
+            | Assign                           -> Some parseAssign
+            | LeftParen                        -> Some parseCall
+            | Question                         -> Some parseConditional
+            | operator when isInfix operator   -> Some (parseInfixOperator operator )
+            | operator when isPostfix operator -> Some (parsePostfixOperator operator)
+            | _                                -> None
         and parseInfix precedence left tokens = 
             match tokens with 
+            | []            -> left, tokens
             | token :: rest ->
-                if precedence < (infixPrecedence token) 
-                then
-                    let parsed =   
-                        match token with 
-                        | Assign                           -> Some (parseAssign left rest)
-                        | LeftParen                        -> Some (parseCall left rest)
-                        | Question                         -> Some (parseConditional left rest)
-                        | operator when isInfix operator   -> Some (parseInfixOperator operator left rest)
-                        | operator when isPostfix operator -> Some (parsePostfixOperator operator left rest)
-                        | _                                -> None 
-                    match parsed with
-                    | Some(left', rest') -> parseInfix precedence left' rest'
-                    | None               -> Some(left, rest)
-                else Some(left, tokens)
-            | _ -> None
+                if precedence >= (infixPrecedence token) 
+                then left, tokens
+                else
+                    match infixParserForToken token with
+                    | Some parselet -> 
+                        let left', rest' = parselet left rest
+                        parseInfix precedence left' rest'
+                    | None -> left, rest
         and parseExpression precedence tokens = 
             let left, rest = parsePrefix tokens
-            match parseInfix precedence left rest with 
-            | Some (expr, rest') -> expr, rest'
-            | None               -> left, rest 
+            parseInfix precedence left rest 
 
         let result, _ = parseExpression 0 (lex input)
         result
