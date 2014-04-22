@@ -2,6 +2,18 @@
     open Expression
     open Lexer
 
+    type private Precedence private () = 
+    // Ordered in increasing precedence.
+        static member None        = 0
+        static member Assignment  = 1
+        static member Conditional = 2
+        static member Sum         = 3
+        static member Product     = 4
+        static member Exponent    = 5
+        static member Prefix      = 6
+        static member Postfix     = 7
+        static member Call        = 8
+    
     let parse input = 
         let oneOf tokens token = List.exists ((=) token) tokens
         let isInfix            = oneOf [ Plus; Minus; Asterisk; Slash; Caret ]
@@ -9,18 +21,19 @@
         let isPostfix          = oneOf [ Bang ]
         let isRightAssociative = oneOf [ Caret ]
         let infixPrecedence = function 
-            | Assign           -> 1
-            | Question         -> 2
-            | Plus | Minus     -> 3
-            | Asterisk | Slash -> 4
-            | Caret            -> 5
-            | Bang             -> 7
-            | LeftParen        -> 8
-            | _                -> 0
+            | Name _ | RightParen | Colon | Comma | Tilde | Eof -> Precedence.None
+            | Assign           -> Precedence.Assignment
+            | Question         -> Precedence.Conditional
+            | Plus | Minus     -> Precedence.Sum
+            | Asterisk | Slash -> Precedence.Product
+            | Caret            -> Precedence.Exponent
+            | Bang             -> Precedence.Postfix
+            | LeftParen        -> Precedence.Call
+
         let rec parseCallArgs accum = function 
             | RightParen :: rest -> accum, rest
             | rest               -> 
-                let arg, rest' = parseExpression 0 rest
+                let arg, rest' = parseExpression Precedence.None rest
                 match rest' with 
                 | RightParen :: rest'' -> accum @ [ arg ] , rest''
                 | Comma      :: rest'' -> parseCallArgs (accum @ [ arg ]) rest''
@@ -29,29 +42,29 @@
             | Lexer.Name name :: rest -> 
                 Expression.Name name, rest
             | LeftParen :: rest ->
-                let expression, rest' = parseExpression 0 rest
+                let expression, rest' = parseExpression Precedence.None rest
                 match rest' with 
                 | RightParen :: rest'' -> expression, rest''
                 | _                    -> failwith "Expected ')'"
             | operator :: rest when isPrefix operator -> 
-                let operand, rest' = parseExpression 6 rest
+                let operand, rest' = parseExpression Precedence.Prefix rest
                 Prefix(operator, operand), rest'
             | _ -> 
                 failwith "Unimplemented"
         and parseAssign left tokens = 
             match left with 
             | Expression.Name name -> 
-                let right, rest = parseExpression ((infixPrecedence Assign) - 1)  tokens
+                let right, rest = parseExpression (Precedence.Assignment - 1) tokens
                 Expression.Assign(name, right), rest
             | _ -> failwith "The left-hand side of an assignment must be a name."
         and parseCall left tokens = 
             let args, rest = parseCallArgs [] tokens
             Call(left, args), rest
         and parseConditional left tokens = 
-            let thenArm, rest = parseExpression 0 tokens
+            let thenArm, rest = parseExpression Precedence.None tokens
             match rest with
             | Colon :: rest' ->
-                let elseArm, rest'' = parseExpression ((infixPrecedence Question) - 1) rest'
+                let elseArm, rest'' = parseExpression (Precedence.Conditional - 1) rest'
                 Conditional(left, thenArm, elseArm), rest''
             | _              -> failwith "Expected ':'."
         and parseInfixOperator operator left tokens = 
@@ -86,5 +99,5 @@
             let left, rest = parsePrefix tokens
             parseInfix precedence left rest 
 
-        let result, _ = parseExpression 0 (lex input)
+        let result, _ = parseExpression Precedence.None (lex input)
         result
