@@ -39,7 +39,7 @@
                 match rest' with 
                 | RightParen :: rest'' -> accum @ [ arg ] , rest''
                 | Comma      :: rest'' -> parseCallArgs (accum @ [ arg ]) rest''
-                | _                    -> failwith "Expected ',' or ')'"
+                | _                    -> [Error "Expected ',' or ')'"], rest'
         and parsePrefix = function
             | Lexer.Name name :: rest -> 
                 Expression.Name name, rest
@@ -47,18 +47,18 @@
                 let expression, rest' = parseExpression Precedence.None rest
                 match rest' with 
                 | RightParen :: rest'' -> expression, rest''
-                | _                    -> failwith "Expected ')'"
+                | _                    -> Error "Expected ')'", rest'
             | operator :: rest when isPrefix operator -> 
                 let operand, rest' = parseExpression Precedence.Prefix rest
                 Prefix(operator, operand), rest'
             | _ -> 
-                failwith "Unimplemented"
+                Error "Unimplemented", []
         and parseAssign left tokens = 
             match left with 
             | Expression.Name name -> 
                 let right, rest = parseExpression (Precedence.Assignment - 1) tokens
                 Expression.Assign(name, right), rest
-            | _ -> failwith "The left-hand side of an assignment must be a name."
+            | _ -> Error "The left-hand side of an assignment must be a name.", tokens
         and parseCall left tokens = 
             let args, rest = parseCallArgs [] tokens
             Call(left, args), rest
@@ -68,7 +68,7 @@
             | Colon :: rest' ->
                 let elseArm, rest'' = parseExpression (Precedence.Conditional - 1) rest'
                 Conditional(left, thenArm, elseArm), rest''
-            | _              -> failwith "Expected ':'."
+            | _              -> Error "Expected ':'.", rest
         and parseInfixOperator operator left tokens = 
             let precedence = 
                 match isRightAssociative operator with

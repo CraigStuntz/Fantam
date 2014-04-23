@@ -42,14 +42,15 @@ let private testData = [
     ]
 
 let private test (input, expected) = 
-    try 
-      let result = Parser.parse input
-      let actual = print result
-      match actual = expected with 
-      | true  -> None
-      | false -> Some (sprintf "[FAIL]   Input: %s%s         Expected: %s%s         Actual: %s" input System.Environment.NewLine expected System.Environment.NewLine actual)
-    with 
-      | ex    -> Some (sprintf "[FAIL]   Input: %s%s         Expected: %s%s         Error: %s" input System.Environment.NewLine expected System.Environment.NewLine ex.Message)
+    let result = Parser.parse input
+    let errors = Expression.errorsFor result
+    if not (List.isEmpty errors)
+    then Some (sprintf "[FAIL]   Input: %s%s         Expected: %s%s         Error: %A" input System.Environment.NewLine expected System.Environment.NewLine errors)
+    else 
+        let actual = print result
+        match actual = expected with 
+        | true  -> None
+        | false -> Some (sprintf "[FAIL]   Input: %s%s         Expected: %s%s         Actual: %s" input System.Environment.NewLine expected System.Environment.NewLine actual)
 
 [<EntryPoint>]
 let main argv = 
