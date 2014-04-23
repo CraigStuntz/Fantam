@@ -35,19 +35,17 @@
         let rec parseCallArgs accum = function 
             | RightParen :: rest -> accum, rest
             | rest               -> 
-                let arg, rest' = parseExpression Precedence.None rest
-                match rest' with 
-                | RightParen :: rest'' -> accum @ [ arg ] , rest''
-                | Comma      :: rest'' -> parseCallArgs (accum @ [ arg ]) rest''
-                | _                    -> [Error "Expected ',' or ')'"], rest'
+                match parseExpression Precedence.None rest with 
+                | arg, RightParen :: rest' -> accum @ [ arg ] , rest'
+                | arg, Comma      :: rest' -> parseCallArgs (accum @ [ arg ]) rest'
+                | _                        -> [Error "Expected ',' or ')'"], rest
         and parsePrefix = function
             | Lexer.Name name :: rest -> 
                 Expression.Name name, rest
             | LeftParen :: rest ->
-                let expression, rest' = parseExpression Precedence.None rest
-                match rest' with 
-                | RightParen :: rest'' -> expression, rest''
-                | _                    -> Error "Expected ')'", rest'
+                match parseExpression Precedence.None rest with 
+                | expression, RightParen :: rest' -> expression, rest'
+                | _                               -> Error "Expected ')'", rest
             | operator :: rest when isPrefix operator -> 
                 let operand, rest' = parseExpression Precedence.Prefix rest
                 Prefix(operator, operand), rest'
@@ -63,12 +61,11 @@
             let args, rest = parseCallArgs [] tokens
             Call(left, args), rest
         and parseConditional left tokens = 
-            let thenArm, rest = parseExpression Precedence.None tokens
-            match rest with
-            | Colon :: rest' ->
-                let elseArm, rest'' = parseExpression (Precedence.Conditional - 1) rest'
-                Conditional(left, thenArm, elseArm), rest''
-            | _              -> Error "Expected ':'.", rest
+            match parseExpression Precedence.None tokens with
+            | thenArm, Colon :: rest ->
+                let elseArm, rest' = parseExpression (Precedence.Conditional - 1) rest
+                Conditional(left, thenArm, elseArm), rest'
+            | _                      -> Error "Expected ':'.", tokens
         and parseInfixOperator operator left tokens = 
             let precedence = 
                 match isRightAssociative operator with
