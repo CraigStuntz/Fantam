@@ -21,10 +21,12 @@
         let isPostfix          = oneOf [ Bang ]
         let isRightAssociative = oneOf [ Caret ]
         let infixPrecedence = function 
-            | Name _ | RightParen | Colon | Comma | Tilde | Eof -> Precedence.None
+            | Name _ | RightParen 
+            | Colon  | Comma 
+            | Tilde  | Eof     -> Precedence.None
             | Assign           -> Precedence.Assignment
             | Question         -> Precedence.Conditional
-            | Plus | Minus     -> Precedence.Sum
+            | Plus     | Minus -> Precedence.Sum
             | Asterisk | Slash -> Precedence.Product
             | Caret            -> Precedence.Exponent
             | Bang             -> Precedence.Postfix
@@ -76,19 +78,19 @@
             Operator(left, operator, right), rest
         and parsePostfixOperator operator left tokens = 
             Postfix(left, operator), tokens
-        and infixParserForToken = function 
-            | Assign                           -> Some parseAssign
-            | LeftParen                        -> Some parseCall
-            | Question                         -> Some parseConditional
-            | operator when isInfix operator   -> Some (parseInfixOperator operator )
-            | operator when isPostfix operator -> Some (parsePostfixOperator operator)
-            | _                                -> None
         and parseInfix precedence left tokens = 
+            let infixParserForToken = function 
+                | Assign                           -> Some parseAssign
+                | LeftParen                        -> Some parseCall
+                | Question                         -> Some parseConditional
+                | operator when isInfix operator   -> Some (parseInfixOperator operator )
+                | operator when isPostfix operator -> Some (parsePostfixOperator operator)
+                | _                                -> None
             match tokens with 
             | token :: rest when precedence < (infixPrecedence token) ->
                 match infixParserForToken token with
-                | Some parselet -> 
-                    let left', rest' = parselet left rest
+                | Some parser -> 
+                    let left', rest' = parser left rest
                     parseInfix precedence left' rest'
                 | None -> left, rest
             | _ -> left, tokens
