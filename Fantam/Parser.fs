@@ -85,16 +85,13 @@
             | _                                -> None
         and parseInfix precedence left tokens = 
             match tokens with 
-            | []            -> left, tokens
-            | token :: rest ->
-                if precedence >= (infixPrecedence token) 
-                then left, tokens
-                else
-                    match infixParserForToken token with
-                    | Some parselet -> 
-                        let left', rest' = parselet left rest
-                        parseInfix precedence left' rest'
-                    | None -> left, rest
+            | token :: rest when precedence < (infixPrecedence token) ->
+                match infixParserForToken token with
+                | Some parselet -> 
+                    let left', rest' = parselet left rest
+                    parseInfix precedence left' rest'
+                | None -> left, rest
+            | _ -> left, tokens
         and parseExpression precedence tokens = 
             let left, rest = parsePrefix tokens
             parseInfix precedence left rest 
